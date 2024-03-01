@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for
+from flask import Flask, request, render_template, redirect, url_for, request, jsonify
 from azure.storage.blob import BlobServiceClient, BlobClient
 from dotenv import load_dotenv
 import os
@@ -28,14 +28,14 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'file' not in request.files:
-        return redirect(request.url)
+        return jsonify({'error': 'No file part'}), 400
     file = request.files['file']
     if file.filename == '':
-        return redirect(request.url)
+        return jsonify({'error': 'No selected file'}), 400
     if file:
         blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=file.filename)
         blob_client.upload_blob(file.read(), overwrite=True)
-        return 'File uploaded successfully!'
+        return jsonify({'message': 'File uploaded successfully!'}), 200
 
 
 if __name__ == '__main__':
