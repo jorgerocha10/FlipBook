@@ -16,6 +16,23 @@
       .drop-area:hover {
         background-color: #f9f9f9;
       }
+      .loader {
+        border: 16px solid #f3f3f3; /* Light grey */
+        border-top: 16px solid #3498db; /* Blue */
+        border-radius: 50%;
+        width: 120px;
+        height: 120px;
+        animation: spin 2s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
@@ -24,9 +41,13 @@
       Drag and drop files here or click to select files
       <input type="file" name="file" style="display: none" />
     </div>
+    <div id="fileInfo"></div>
     <!-- Upload Button -->
     <button id="uploadBtn">Upload File</button>
-    <div id="fileInfo"></div>
+    <div id="loadingSpinner" style="display: none">
+      <div class="loader"></div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
   </body>
 </html>

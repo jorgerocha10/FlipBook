@@ -3,43 +3,48 @@ document.addEventListener("DOMContentLoaded", function() {
     const dropArea = document.getElementById('drop-area');
     const input = dropArea.querySelector('input[type=file]');
     const uploadBtn = document.getElementById('uploadBtn');
-    const fileInfo = document.getElementById('fileInfo'); // Get the file info display element
+    const fileInfo = document.getElementById('fileInfo');
+    const loadingSpinner = document.getElementById('loadingSpinner'); // Get the loading spinner element
+    const validVideoFormats = ['mp4', 'mov', 'wmv', 'avi']; // List of accepted video formats
+    const maxSizeInMB = 50; // Maximum file size in MB
+    const maxSizeInBytes = maxSizeInMB * 1024 * 1024; // Convert MB to Bytes
 
-    // Clicking the drop area also opens the file explorer
     dropArea.addEventListener('click', function() {
         input.click();
     });
 
-    // Handle files once they are selected via the file explorer
     input.addEventListener('change', function() {
         droppedFiles = this.files;
-        displayFileNames(droppedFiles); // Display the file names on the UI
+        if (validateFiles(droppedFiles) && validateFileSize(droppedFiles)) {
+            displayFileNames(droppedFiles); // Display the file names on the UI
+        } else {
+            clearSelection();
+        }
     });
 
-    // Prevent default behaviors for drag events
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, preventDefaults, false);
         document.body.addEventListener(eventName, preventDefaults, false);
     });
 
-    // Highlight the drop area during a dragover
     ['dragenter', 'dragover'].forEach(eventName => {
         dropArea.addEventListener(eventName, highlight, false);
     });
 
-    // Unhighlight the drop area once dragging is complete
     ['dragleave', 'drop'].forEach(eventName => {
         dropArea.addEventListener(eventName, unhighlight, false);
     });
 
-    // Handle files dropped into the area
     dropArea.addEventListener('drop', function(e) {
         let dt = e.dataTransfer;
         droppedFiles = dt.files;
-        displayFileNames(droppedFiles); // Display the file names on the UI
+        if (validateFiles(droppedFiles) && validateFileSize(droppedFiles)) {
+            displayFileNames(droppedFiles); // Display the file names on the UI
+        } else {
+            clearSelection();
+        }
     });
 
-    // Prevent default behavior (Prevent file from being opened)
     function preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
@@ -53,16 +58,33 @@ document.addEventListener("DOMContentLoaded", function() {
         dropArea.classList.remove('highlight');
     }
 
-    // Upload files when the upload button is clicked
-    uploadBtn.addEventListener('click', function() {
-        if (droppedFiles.length > 0) {
-            Array.from(droppedFiles).forEach(uploadFile);
-        } else {
-            alert("Please select a file to upload.");
+    function validateFiles(files) {
+        for (let i = 0; i < files.length; i++) {
+            const fileExtension = files[i].name.split('.').pop().toLowerCase();
+            if (!validVideoFormats.includes(fileExtension)) {
+                alert(`Invalid file format: ${files[i].name}. Please upload a video file.`);
+                return false;
+            }
         }
-    });
+        return true;
+    }
 
-    // Function to display file names in the UI
+    function validateFileSize(files) {
+        for (let i = 0; i < files.length; i++) {
+            if (files[i].size > maxSizeInBytes) {
+                alert(`File size exceeds limit: ${files[i].name}. Please upload a file smaller than ${maxSizeInMB}MB.`);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function clearSelection() {
+        input.value = '';
+        droppedFiles = [];
+        fileInfo.innerHTML = '';
+    }
+
     function displayFileNames(files) {
         fileInfo.innerHTML = ''; // Clear previous file names
         if(files.length > 1) {
@@ -75,28 +97,34 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
-// Function to upload files
-function uploadFile(file) {
-    let formData = new FormData();
-    formData.append('file', file); // Append the file to the formData object
-
-    // Use fetch API to send the file to the server
-    fetch('/upload', {
-        method: 'POST',
-        body: formData,
-    })
-    .then(response => response.text())
-    .then(data => {
-        console.log(data); // Log the server response
-        alert("File uploaded successfully!");
-
-        // Redirect to the desired URL after successful upload
-        window.location.href = '/'; // Change '/upload' to your desired URL
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert("Error uploading file.");
+    uploadBtn.addEventListener('click', function() {
+        if (droppedFiles.length > 0 && validateFiles(droppedFiles) && validateFileSize(droppedFiles)) {
+            loadingSpinner.style.display = 'block'; // Show the spinner
+            const uploadPromises = Array.from(droppedFiles).map(file => uploadFile(file));
+            Promise.all(uploadPromises).finally(() => {
+                loadingSpinner.style.display = 'none'; // Hide the spinner once all uploads are done
+            });
+        } else {
+            alert("Please select a valid video file to upload.");
+        }
     });
-}
 
+    function uploadFile(file) {
+        let formData = new FormData();
+        formData.append('file', file);
+
+        return fetch('/upload', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.text())
+        .then(data => {
+            console.log(data);
+            alert("File uploaded successfully!");
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert("Error uploading file.");
+        });
+    }
 });
